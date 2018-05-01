@@ -20,19 +20,17 @@ must_columns = ["chrom1",
                 "la_exp.vertical.value",
                 "la_exp.horizontal.value",
                 "la_exp.lowleft.value",
-                "la_exp.upright.value",
                 "la_exp.donut.qval",
                 "la_exp.vertical.qval",
                 "la_exp.horizontal.qval",
-                "la_exp.lowleft.qval",
-                "la_exp.upright.qval"]
+                "la_exp.lowleft.qval"]
 
 # HiCCUPs to cooltools BEDPE renamer, just in case:
 hiccups_to_cooltools = {'chr1': "chrom1",
                     'x1': "start1",
                     'x2': "end1",
                     'chr2': "chrom2",
-                    'y1': "start1",
+                    'y1': "start2",
                     'y2': "end2",
                     'color': "color",
                     'o': "obs.raw",
