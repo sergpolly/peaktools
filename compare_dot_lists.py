@@ -56,14 +56,14 @@ def read_validate_dots_list(dots_path):
     try:
         dots_must = dots[must_columns]
     except KeyError as exc_one:
-        print("Seems like {} is not in cooltools format, trying conversion ...".format(dots_path_1))
+        print("Seems like {} is not in cooltools format, trying conversion ...".format(dots_path))
         dots = dots.rename(columns=hiccups_to_cooltools)
         try:
             dots_must = dots[must_columns]
             dots_must['chrom1'] = "chr"+dots_must['chrom1']
             dots_must['chrom2'] = "chr"+dots_must['chrom2']
         except KeyError as exc_two:
-            print("Seems like conversion didn't work for {}".format(dots_path_1))
+            print("Seems like conversion didn't work for {}".format(dots_path))
             raise exc_two
 
     # returning the subset:
