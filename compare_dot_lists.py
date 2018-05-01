@@ -77,7 +77,7 @@ def read_validate_dots_list(dots_path):
 
 
 
-@cli.command()
+@click.command()
 @click.argument(
     "dots_path_1",
     metavar="DOTS_PATH_1",

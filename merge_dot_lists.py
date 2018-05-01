@@ -5,7 +5,7 @@ import numpy as np
 from cooltools.loopify import clust_2D_pixels
 
 
-@cli.command()
+@click.command()
 @click.argument(
     "dots_path_5kb",
     metavar="DOTS_PATH_5kb",
