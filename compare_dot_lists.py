@@ -67,7 +67,7 @@ def read_validate_dots_list(dots_path):
         except KeyError as exc_two:
             print("Seems like conversion didn't work for {}".format(dots_path_1))
             raise exc_two
-            
+
     # returning the subset:
     return dots_must
 
@@ -117,7 +117,7 @@ def read_validate_dots_list(dots_path):
 @click.option(
     "--bin2_id_name",
     help="Name of the 2st coordinate (column index) to use"
-         " for distance calculations and clustering",
+         " for distance calculations and clustering"
          " alternatives include: end2, cstart2 (centroid).",
     type=str,
     default="start2",

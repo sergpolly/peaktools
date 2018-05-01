@@ -45,7 +45,7 @@ from cooltools.loopify import clust_2D_pixels
 @click.option(
     "--bin2_id_name",
     help="Name of the 2st coordinate (column index) to use"
-         " for distance calculations and clustering",
+         " for distance calculations and clustering"
          " alternatives include: end2, cstart2 (centroid).",
     type=str,
     default="start2",
