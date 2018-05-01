@@ -59,7 +59,7 @@ def read_validate_dots_list(dots_path):
         print("Seems like {} is not in cooltools format, trying conversion ...".format(dots_path))
         dots = dots.rename(columns=hiccups_to_cooltools)
         try:
-            dots_must = dots[must_columns]
+            dots_must = dots[must_columns].copy()
             dots_must['chrom1'] = "chr"+dots_must['chrom1']
             dots_must['chrom2'] = "chr"+dots_must['chrom2']
         except KeyError as exc_two:
@@ -149,6 +149,9 @@ def compare_dot_lists(dots_path_1,
         print(chroms_2)
         print()
         raise ValueError("chromosomes must match ...")
+    else:
+        # if chroms are matching ...
+        chroms = chroms_1
 
     # looks like lists of dots are good to go:
     if verbose:
