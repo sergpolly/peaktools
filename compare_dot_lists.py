@@ -190,6 +190,11 @@ def compare_dot_lists(dots_path_1,
                                      right_index=True,
                                      suffixes=('', '_merge'))
 
+    if "c_size_merge" not in dots_merged.columns:
+        dots_merged = dots_merged.rename(columns={"c_size":"c_size_merge"})
+    if "c_label_merge" not in dots_merged.columns:
+        dots_merged = dots_merged.rename(columns={"c_label":"c_label_merge"})
+
 
     if verbose:
         # report larger >2 clusters:
