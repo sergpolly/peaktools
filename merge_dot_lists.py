@@ -5,6 +5,45 @@ import numpy as np
 from cooltools.loopify import clust_2D_pixels
 
 
+
+# minimal subset of columns to handle:
+must_columns = ["chrom1",
+                "start1",
+                "end1",
+                "chrom2",
+                "start2",
+                "end2",
+                "obs.raw",
+                "cstart1",
+                "cstart2",
+                "c_size",
+                "la_exp.donut.value",
+                "la_exp.vertical.value",
+                "la_exp.horizontal.value",
+                "la_exp.lowleft.value",
+                "la_exp.donut.qval",
+                "la_exp.vertical.qval",
+                "la_exp.horizontal.qval",
+                "la_exp.lowleft.qval"]
+
+
+def read_validate_dots_list(dots_path):
+    # load dots lists ...
+    dots = pd.read_table(dots_path)
+
+    try:
+        dots_must = dots[must_columns]
+    except KeyError as exc_one:
+        print("Seems like {} is not in cooltools format or lacks some columns ...".format(dots_path))
+        raise exc_one
+
+    # returning the subset:
+    return dots_must
+
+
+
+
+
 @click.command()
 @click.argument(
     "dots_path_5kb",
@@ -63,8 +102,8 @@ def merge_dot_lists(dots_path_5kb,
 
 
     # load dots lists ...
-    dots_5kb = pd.read_table(dots_path_5kb)
-    dots_10kb = pd.read_table(dots_path_10kb)
+    dots_5kb  = read_validate_dots_list(dots_path_5kb)
+    dots_10kb = read_validate_dots_list(dots_path_10kb)
 
     if verbose:
         # before merging:
@@ -173,39 +212,12 @@ def merge_dot_lists(dots_path_5kb,
         print("number of pixels after the merge: {}".format(len(dots_merged_filtered)))
         print()
 
-    # # tentaive output coplumns list:
-    columns_for_output = \
-            ['chrom1',
-            'start1',
-            'end1',
-            'chrom2',
-            'start2',
-            'end2',
-            'res',
-            'c_size_merge',
-            'la_exp.donut.value',
-            'la_exp.vertical.value',
-            'la_exp.horizontal.value',
-            'la_exp.lowleft.value',
-            'la_exp.upright.value',
-            'exp.raw',
-            'obs.raw',
-            'la_exp.donut.qval',
-            'la_exp.vertical.qval',
-            'la_exp.horizontal.qval',
-            'la_exp.lowleft.qval',
-            'la_exp.upright.qval',
-            'cstart1',
-            'cstart2',
-            'c_label',
-            'c_size']
-
 
     ##############################
     # OUTPUT:
     ##############################
     if output is not None:
-        dots_merged_filtered[columns_for_output].to_csv(
+        dots_merged_filtered[must_columns].to_csv(
                                         output,
                                         sep='\t',
                                         header=True,
