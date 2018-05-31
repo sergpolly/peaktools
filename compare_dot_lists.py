@@ -2,7 +2,7 @@
 import click
 import pandas as pd
 import numpy as np
-from cooltools.loopify import clust_2D_pixels
+from cooltools.dotfinder import clust_2D_pixels
 
 
 # minimal subset of columns to handle:
@@ -19,11 +19,11 @@ must_columns = ["chrom1",
                 "la_exp.donut.value",
                 "la_exp.vertical.value",
                 "la_exp.horizontal.value",
-                "la_exp.lowleft.value",
-                "la_exp.donut.qval",
-                "la_exp.vertical.qval",
-                "la_exp.horizontal.qval",
-                "la_exp.lowleft.qval"]
+                "la_exp.lowleft.value"]
+                # "la_exp.donut.qval",
+                # "la_exp.vertical.qval",
+                # "la_exp.horizontal.qval",
+                # "la_exp.lowleft.qval"]
 
 # HiCCUPs to cooltools BEDPE renamer, just in case:
 hiccups_to_cooltools = {'chr1': "chrom1",
