@@ -169,6 +169,7 @@ def compare_dot_lists(dots_path_1,
     dots_merged = pd.concat([dots_1,dots_2],
                             ignore_index=True).sort_values(by=["chrom1",bin1_id_name,"chrom2",bin2_id_name])
 
+    very_verbose = False
     pixel_clust_list = []
     for chrom in chroms:
         pixel_clust = clust_2D_pixels(dots_merged[(dots_merged['chrom1']==chrom) & \
@@ -176,7 +177,7 @@ def compare_dot_lists(dots_path_1,
                                       threshold_cluster = radius,
                                       bin1_id_name      = bin1_id_name,
                                       bin2_id_name      = bin2_id_name,
-                                      verbose = verbose)
+                                      verbose = very_verbose)
         pixel_clust_list.append(pixel_clust)
 
     # concatenate clustering results ...
