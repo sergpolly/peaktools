@@ -16,6 +16,7 @@ must_columns = ["chrom1",
                 "obs.raw",
                 "cstart1",
                 "cstart2",
+                "c_label",
                 "c_size",
                 "la_exp.donut.value",
                 "la_exp.vertical.value",
@@ -149,7 +150,6 @@ def merge_dot_lists(dots_path_5kb,
                                     left_index=True,
                                     right_index=True,
                                     suffixes=('', '_merge'))
-
 
     if verbose:
         # report >2 clusters:
