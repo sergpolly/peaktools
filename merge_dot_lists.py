@@ -129,6 +129,7 @@ def merge_dot_lists(dots_path_5kb,
 
     # l10dat[["chrom1","start1","end1","chrom2","start2","end2"]].copy()
 
+    very_verbose = False
     pixel_clust_list = []
     for chrom in chroms:
         pixel_clust = clust_2D_pixels(dots_merged[(dots_merged['chrom1']==chrom) & \
@@ -136,7 +137,7 @@ def merge_dot_lists(dots_path_5kb,
                                       threshold_cluster = radius,
                                       bin1_id_name      = bin1_id_name,
                                       bin2_id_name      = bin2_id_name,
-                                      verbose = verbose)
+                                      verbose = very_verbose)
         pixel_clust_list.append(pixel_clust)
 
     # concatenate clustering results ...
