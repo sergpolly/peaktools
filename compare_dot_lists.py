@@ -142,6 +142,8 @@ def compare_dot_lists(dots_path_1,
                       radius,
                       verbose,
                       # output,
+                      out_nonoverlap1,
+                      out_nonoverlap2,
                       bin1_id_name,
                       bin2_id_name):
 
