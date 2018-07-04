@@ -51,14 +51,13 @@ hiccups_to_cooltools = {'chr1': "chrom1",
 
 def read_validate_dots_list(dots_path):
     # load dots lists ...
-    dots = pd.read_table(dots_path)
-
     try:
+        dots = pd.read_table(dots_path)
         dots_must = dots[must_columns]
     except KeyError as exc_one:
         print("Seems like {} is not in cooltools format, trying conversion ...".format(dots_path))
-        dots = dots.rename(columns=hiccups_to_cooltools)
         try:
+            dots = dots.rename(columns=hiccups_to_cooltools)
             dots_must = dots[must_columns].copy()
             dots_must['chrom1'] = "chr"+dots_must['chrom1']
             dots_must['chrom2'] = "chr"+dots_must['chrom2']
@@ -118,6 +117,18 @@ def read_validate_dots_list(dots_path):
          " a good counterpart in dots_path_1.",
     type=str)
 @click.option(
+    "--out-overlap1",
+    help="Specify output file name where to store"
+         " peaks from dots_path_1 that have a good"
+         " counterpart in dots_path_2.",
+    type=str)
+@click.option(
+    "--out-overlap2",
+    help="Specify output file name where to store"
+         " peaks from dots_path_2 that have a good"
+         " counterpart in dots_path_1.",
+    type=str)
+@click.option(
     "--bin1-id-name",
     help="Name of the 1st coordinate (row index) to use"
          " for distance calculations and clustering"
@@ -144,6 +155,8 @@ def compare_dot_lists(dots_path_1,
                       # output,
                       out_nonoverlap1,
                       out_nonoverlap2,
+                      out_overlap1,
+                      out_overlap2,
                       bin1_id_name,
                       bin2_id_name):
 
@@ -223,12 +236,18 @@ def compare_dot_lists(dots_path_1,
                                         dots_merged["c_label_merge"].astype(np.str)
 
     # all we need to do is to count reproducible peaks ...
-    number_of_reproducible_peaks = len(dots_merged[dots_merged["c_size_merge"]>1]["c_label_merge"].unique())
+    reproducible_peaks = dots_merged[dots_merged["c_size_merge"]>1]
+    nonreproducible_peaks = dots_merged[dots_merged["c_size_merge"]==1]
+    # number to print out ...
+    number_of_reproducible_peaks = len(reproducible_peaks["c_label_merge"].unique())
+
+    rep_dots_1 = reproducible_peaks[reproducible_peaks["dot_label"]=="cmp1"]
+    rep_dots_2 = reproducible_peaks[reproducible_peaks["dot_label"]=="cmp2"]
 
     # we are very interested in the non-reproducible peaks as well,
     # at least for debugging purposes, thus we'd want to output them ...
-    nonrep_dots_1 = dots_merged[(dots_merged["c_size_merge"]==1)&(dots_merged["dot_label"]=="cmp1")]
-    nonrep_dots_2 = dots_merged[(dots_merged["c_size_merge"]==1)&(dots_merged["dot_label"]=="cmp2")]
+    nonrep_dots_1 = nonreproducible_peaks[nonreproducible_peaks["dot_label"]=="cmp1"]
+    nonrep_dots_2 = nonreproducible_peaks[nonreproducible_peaks["dot_label"]=="cmp2"]
 
     if out_nonoverlap1:
         nonrep_dots_1.merge(fulldots_1,
@@ -237,7 +256,6 @@ def compare_dot_lists(dots_path_1,
             # argument to something smaller later on ...
             on=must_columns,
             sort=True ).to_csv(out_nonoverlap1,sep='\t',index=False)
-
     if out_nonoverlap2:
         nonrep_dots_2.merge(fulldots_2,
             how="left",
@@ -245,6 +263,20 @@ def compare_dot_lists(dots_path_1,
             # argument to something smaller later on ...
             on=must_columns,
             sort=True ).to_csv(out_nonoverlap2,sep='\t',index=False)
+    if out_overlap1:
+        rep_dots_1.merge(fulldots_1,
+            how="left",
+            # consider modifying 'must_columns' or this on
+            # argument to something smaller later on ...
+            on=must_columns,
+            sort=True ).to_csv(out_overlap1,sep='\t',index=False)
+    if out_overlap2:
+        rep_dots_2.merge(fulldots_2,
+            how="left",
+            # consider modifying 'must_columns' or this on
+            # argument to something smaller later on ...
+            on=must_columns,
+            sort=True ).to_csv(out_overlap2,sep='\t',index=False)
 
     if verbose:
         # describe each category:
