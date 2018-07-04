@@ -11,15 +11,15 @@ must_columns = ["chrom1",
                 "end1",
                 "chrom2",
                 "start2",
-                "end2",
-                "obs.raw",
-                "cstart1",
-                "cstart2",
-                "c_size",
-                "la_exp.donut.value",
-                "la_exp.vertical.value",
-                "la_exp.horizontal.value",
-                "la_exp.lowleft.value"]
+                "end2"]
+                # "obs.raw",
+                # "cstart1",
+                # "cstart2",
+                # "c_size",
+                # "la_exp.donut.value",
+                # "la_exp.vertical.value",
+                # "la_exp.horizontal.value",
+                # "la_exp.lowleft.value"]
                 # "la_exp.donut.qval",
                 # "la_exp.vertical.qval",
                 # "la_exp.horizontal.qval",
@@ -66,8 +66,9 @@ def read_validate_dots_list(dots_path):
             print("Seems like conversion didn't work for {}".format(dots_path))
             raise exc_two
 
-    # returning the subset:
-    return dots_must
+    # returning both full DataFrame and a subset
+    # with must_columns only ...
+    return dots, dots_must
 
 
 
@@ -77,12 +78,12 @@ def read_validate_dots_list(dots_path):
 
 @click.command()
 @click.argument(
-    "dots_path_1",
+    "dots-path-1",
     metavar="DOTS_PATH_1",
     type=click.Path(exists=True, dir_okay=False),
     nargs=1)
 @click.argument(
-    "dots_path_2",
+    "dots-path-2",
     metavar="DOTS_PATH_2",
     type=click.Path(exists=True, dir_okay=False),
     nargs=1)
@@ -105,7 +106,19 @@ def read_validate_dots_list(dots_path):
 #          " the results of dot-merger, in a BEDPE-like format.",
 #     type=str)
 @click.option(
-    "--bin1_id_name",
+    "--out-nonoverlap1",
+    help="Specify output file name where to store"
+         " peaks from dots_path_1 that do not have"
+         " a good counterpart in dots_path_2.",
+    type=str)
+@click.option(
+    "--out-nonoverlap2",
+    help="Specify output file name where to store"
+         " peaks from dots_path_2 that do not have"
+         " a good counterpart in dots_path_1.",
+    type=str)
+@click.option(
+    "--bin1-id-name",
     help="Name of the 1st coordinate (row index) to use"
          " for distance calculations and clustering"
          " alternatives include: end1, cstart1 (centroid).",
@@ -113,7 +126,7 @@ def read_validate_dots_list(dots_path):
     default="start1",
     show_default=True)
 @click.option(
-    "--bin2_id_name",
+    "--bin2-id-name",
     help="Name of the 2st coordinate (column index) to use"
          " for distance calculations and clustering"
          " alternatives include: end2, cstart2 (centroid).",
@@ -135,19 +148,15 @@ def compare_dot_lists(dots_path_1,
 
     # load dots lists ...
     # add some sort of cross-validation later on (kinda did) ...
-    dots_1 = read_validate_dots_list(dots_path_1)
-    dots_2 = read_validate_dots_list(dots_path_2)
+    fulldots_1, dots_1 = read_validate_dots_list(dots_path_1)
+    fulldots_2, dots_2 = read_validate_dots_list(dots_path_2)
 
     # extract a list of chroms:
     chroms_1 = sorted(list(dots_1['chrom1'].drop_duplicates()))
     chroms_2 = sorted(list(dots_2['chrom1'].drop_duplicates()))
     if chroms_1 != chroms_2:
         print("{} and {} refers to different sets of chromosomes".format(dots_path_1,dots_path_2))
-        print()
-        print(chroms_1)
-        print()
-        print(chroms_2)
-        print()
+        print("chroms_1:\n{}\nchroms_2:\n{}\n".format(chroms_1,chroms_2))
         raise ValueError("chromosomes must match ...")
     else:
         # if chroms are matching ...
@@ -171,49 +180,73 @@ def compare_dot_lists(dots_path_1,
 
     very_verbose = False
     pixel_clust_list = []
+    # clustering is done on a per-chromosome basis ...
     for chrom in chroms:
         pixel_clust = clust_2D_pixels(dots_merged[(dots_merged['chrom1']==chrom) & \
                                                   (dots_merged['chrom2']==chrom)],
-                                      threshold_cluster = radius,
-                                      bin1_id_name      = bin1_id_name,
-                                      bin2_id_name      = bin2_id_name,
-                                      verbose = very_verbose)
+                                      threshold_cluster= radius,
+                                      bin1_id_name= bin1_id_name,
+                                      bin2_id_name= bin2_id_name,
+                                      clust_label_name='c_label_merge',
+                                      clust_size_name='c_size_merge',
+                                      verbose= very_verbose)
         pixel_clust_list.append(pixel_clust)
+
 
     # concatenate clustering results ...
     # indexing information persists here ...
     pixel_clust_df = pd.concat(pixel_clust_list, ignore_index=False)
-    # now merge pixel_clust_df and dots_merged DataFrame ...
-    # # and merge (index-wise) with the main DataFrame:
+    # pixel_clust_list
+    # must be a DataFrame with the following columns:
+    # ['c'+bin1_id_name, 'c'+bin2_id_name, 'c_label_merge', 'c_size_merge']
+    # thus there should be no column naming conflicts downsrteam ...
+
+    # now merge pixel_clust_df and dots_merged DataFrame (index-wise):
+    # ignore suffixes=('_x','_y'), taken care of upstream.
     dots_merged =  dots_merged.merge(pixel_clust_df,
                                      how='left',
                                      left_index=True,
-                                     right_index=True,
-                                     suffixes=('', '_merge'))
-
-    if "c_size_merge" not in dots_merged.columns:
-        dots_merged = dots_merged.rename(columns={"c_size":"c_size_merge"})
-    if "c_label_merge" not in dots_merged.columns:
-        dots_merged = dots_merged.rename(columns={"c_label":"c_label_merge"})
-
+                                     right_index=True)
 
     if verbose:
         # report larger >2 clusters:
-        print()
-        print("Number of pixels in unwanted >2 clusters: {}".format(len(dots_merged[dots_merged["c_size_merge"]>2])))
-        print()
+        print("\nNumber of pixels in unwanted >2 clusters: {}\n" \
+            .format(len(dots_merged[dots_merged["c_size_merge"]>2])))
 
 
-    # introduce unqie label per merged cluster, just in case:
-    dots_merged["c_label_merge"] = dots_merged["chrom1"]+"_"+dots_merged["c_label_merge"].astype(np.str)
+    # introduce unqie genome-wide labels per merged cluster,
+    # just in case:
+    dots_merged["c_label_merge"] = dots_merged["chrom1"]+ \
+                                        "_" + \
+                                        dots_merged["c_label_merge"].astype(np.str)
 
     # all we need to do is to count reproducible peaks ...
     number_of_reproducible_peaks = len(dots_merged[dots_merged["c_size_merge"]>1]["c_label_merge"].unique())
 
+    # we are very interested in the non-reproducible peaks as well,
+    # at least for debugging purposes, thus we'd want to output them ...
+    nonrep_dots_1 = dots_merged[(dots_merged["c_size_merge"]==1)&(dots_merged["dot_label"]=="cmp1")]
+    nonrep_dots_2 = dots_merged[(dots_merged["c_size_merge"]==1)&(dots_merged["dot_label"]=="cmp2")]
+
+    if out_nonoverlap1:
+        nonrep_dots_1.merge(fulldots_1,
+            how="left",
+            # consider modifying 'must_columns' or this on
+            # argument to something smaller later on ...
+            on=must_columns,
+            sort=True ).to_csv(out_nonoverlap1,sep='\t',index=False)
+
+    if out_nonoverlap2:
+        nonrep_dots_2.merge(fulldots_2,
+            how="left",
+            # consider modifying 'must_columns' or this on
+            # argument to something smaller later on ...
+            on=must_columns,
+            sort=True ).to_csv(out_nonoverlap2,sep='\t',index=False)
+
     if verbose:
         # describe each category:
-        print("number_of_reproducible_peaks: {}".format(number_of_reproducible_peaks))
-        print()
+        print("number_of_reproducible_peaks: {}\n".format(number_of_reproducible_peaks))
 
     # return just in case ...
     return number_of_reproducible_peaks
