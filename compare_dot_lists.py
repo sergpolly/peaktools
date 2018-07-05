@@ -58,9 +58,9 @@ def read_validate_dots_list(dots_path):
         print("Seems like {} is not in cooltools format, trying conversion ...".format(dots_path))
         try:
             dots = dots.rename(columns=hiccups_to_cooltools)
+            dots['chrom1'] = "chr"+dots['chrom1']
+            dots['chrom2'] = "chr"+dots['chrom2']
             dots_must = dots[must_columns].copy()
-            dots_must['chrom1'] = "chr"+dots_must['chrom1']
-            dots_must['chrom2'] = "chr"+dots_must['chrom2']
         except KeyError as exc_two:
             print("Seems like conversion didn't work for {}".format(dots_path))
             raise exc_two
@@ -181,17 +181,16 @@ def compare_dot_lists(dots_path_1,
     if verbose:
         # before merging:
         print("Before comparison:")
-        print("number of dots_1: {}".format(len(dots_1)))
-        print("number of dots_2: {}".format(len(dots_2)))
-        print("")
+        print("number of dots_1: {}\n".format(len(dots_1)))
+        print("number of dots_2: {}\n".format(len(dots_2)))
 
     # add label to each DataFrame:
     dots_1["dot_label"] = "cmp1"
     dots_2["dot_label"] = "cmp2"
 
     # merge 2 DataFrames and sort (why sorting ?! just in case):
-    dots_merged = pd.concat([dots_1,dots_2],
-                            ignore_index=True).sort_values(by=["chrom1",bin1_id_name,"chrom2",bin2_id_name])
+    dots_merged = pd.concat([dots_1,dots_2], ignore_index=True) \
+                    .sort_values(by=["chrom1",bin1_id_name,"chrom2",bin2_id_name])
 
     very_verbose = False
     pixel_clust_list = []
@@ -199,15 +198,13 @@ def compare_dot_lists(dots_path_1,
     for chrom in chroms:
         pixel_clust = clust_2D_pixels(dots_merged[(dots_merged['chrom1']==chrom) & \
                                                   (dots_merged['chrom2']==chrom)],
-                                      threshold_cluster= radius,
-                                      bin1_id_name= bin1_id_name,
-                                      bin2_id_name= bin2_id_name,
+                                      threshold_cluster=radius,
+                                      bin1_id_name=bin1_id_name,
+                                      bin2_id_name=bin2_id_name,
                                       clust_label_name='c_label_merge',
                                       clust_size_name='c_size_merge',
-                                      verbose= very_verbose)
+                                      verbose=very_verbose)
         pixel_clust_list.append(pixel_clust)
-
-
     # concatenate clustering results ...
     # indexing information persists here ...
     pixel_clust_df = pd.concat(pixel_clust_list, ignore_index=False)
@@ -224,7 +221,10 @@ def compare_dot_lists(dots_path_1,
                                      right_index=True)
 
     if verbose:
-        # report larger >2 clusters:
+        # report larger >2 clusters.
+        # These are a bit of an artifact, where a peak from
+        # 1 list have more than one good counterpart in the
+        # other list.
         print("\nNumber of pixels in unwanted >2 clusters: {}\n" \
             .format(len(dots_merged[dots_merged["c_size_merge"]>2])))
 
@@ -232,23 +232,29 @@ def compare_dot_lists(dots_path_1,
     # introduce unqie genome-wide labels per merged cluster,
     # just in case:
     dots_merged["c_label_merge"] = dots_merged["chrom1"]+ \
-                                        "_" + \
-                                        dots_merged["c_label_merge"].astype(np.str)
+                                      "_" + dots_merged["c_label_merge"].astype(np.str)
 
     # all we need to do is to count reproducible peaks ...
     reproducible_peaks = dots_merged[dots_merged["c_size_merge"]>1]
     nonreproducible_peaks = dots_merged[dots_merged["c_size_merge"]==1]
     # number to print out ...
     number_of_reproducible_peaks = len(reproducible_peaks["c_label_merge"].unique())
+    #
+    if verbose:
+        # describe each category:
+        print("number_of_reproducible_peaks: {}\n".format(number_of_reproducible_peaks))
 
+    ###################################################################
+    # extract and output reproducible/nonoverlaping peaks ...
+    ###################################################################
     rep_dots_1 = reproducible_peaks[reproducible_peaks["dot_label"]=="cmp1"]
     rep_dots_2 = reproducible_peaks[reproducible_peaks["dot_label"]=="cmp2"]
-
     # we are very interested in the non-reproducible peaks as well,
     # at least for debugging purposes, thus we'd want to output them ...
     nonrep_dots_1 = nonreproducible_peaks[nonreproducible_peaks["dot_label"]=="cmp1"]
     nonrep_dots_2 = nonreproducible_peaks[nonreproducible_peaks["dot_label"]=="cmp2"]
 
+    # output:
     if out_nonoverlap1:
         nonrep_dots_1.merge(fulldots_1,
             how="left",
@@ -277,10 +283,6 @@ def compare_dot_lists(dots_path_1,
             # argument to something smaller later on ...
             on=must_columns,
             sort=True ).to_csv(out_overlap2,sep='\t',index=False)
-
-    if verbose:
-        # describe each category:
-        print("number_of_reproducible_peaks: {}\n".format(number_of_reproducible_peaks))
 
     # return just in case ...
     return number_of_reproducible_peaks
