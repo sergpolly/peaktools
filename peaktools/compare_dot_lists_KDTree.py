@@ -3,8 +3,6 @@ import click
 from scipy.spatial import KDTree, cKDTree
 import numpy as np
 import pandas as pd
-# import matplotlib.pyplot as plt
-from cooltools.dotfinder import clust_2D_pixels
 
 from . import cli
 
@@ -14,7 +12,7 @@ from . import cli
 # and BEDPE format handling and sanitation should be 
 # moved elsewhere 
 # - bioframe ?
-# -clodius style  ?
+# -clodius style  ? - ask column number for each reuired field ...
 #
 #################################
 
@@ -240,8 +238,14 @@ def intersect_dots_sets(tin,
 # options ...
 @click.option(
     '--radius', 
-    help='Radius for clustering, i.e., to consider'
-         'a couple of dots "identical", typically ~20kb.',
+    help="A threshold radius for calling a pair of"
+         " identical. [Has no effect right now]"
+         " euivalent to following for now:"
+         " 0.2*dist if dist < 50kb else 50kb,"
+         " where dist = |bin1-id-name - bin2-id-name|",
+         #  consider substituting this with a proper threshold function
+         #  0.2*dist if dist < 50000 else 50000, where dist = |bin1-id-name - bin2-id-name|
+         #  use eval or numexpr or something along this lines ...
     type=int,
     default=20000,
     show_default=True)
@@ -250,34 +254,35 @@ def intersect_dots_sets(tin,
     help="Enable verbose output",
     is_flag=True,
     default=False)
-# @click.option(
-#     "--output",
-#     help="Specify output file name where to store"
-#          " the results of dot-merger, in a BEDPE-like format.",
-#     type=str)
+@click.option(
+    "--output",
+    help="Specify output file name where to store"
+         " the results of a comparison of a pair of BEDPEs."
+         " Will use stdout if not provided.",
+    type=str)
 @click.option(
     "--out-nonoverlap1",
     help="Specify output file name where to store"
          " peaks from dots_path_1 that do not have"
-         " a good counterpart in dots_path_2.",
+         " neighbours in dots_path_2.",
     type=str)
 @click.option(
     "--out-nonoverlap2",
     help="Specify output file name where to store"
          " peaks from dots_path_2 that do not have"
-         " a good counterpart in dots_path_1.",
+         " neighbours in dots_path_1.",
     type=str)
 @click.option(
     "--out-overlap1",
     help="Specify output file name where to store"
-         " peaks from dots_path_1 that have a good"
-         " counterpart in dots_path_2.",
+         " peaks from dots_path_1 that have neighbours"
+         " in dots_path_2.",
     type=str)
 @click.option(
     "--out-overlap2",
     help="Specify output file name where to store"
-         " peaks from dots_path_2 that have a good"
-         " counterpart in dots_path_1.",
+         " peaks from dots_path_2 that have neighbours"
+         " in dots_path_1.",
     type=str)
 @click.option(
     "--bin1-id-name",
@@ -297,13 +302,11 @@ def intersect_dots_sets(tin,
     show_default=True)
 
 
-
-
 def compare_dot_lists(dots_path_1,
                       dots_path_2,
                       radius,
                       verbose,
-                      # output,
+                      output,
                       out_nonoverlap1,
                       out_nonoverlap2,
                       out_overlap1,
@@ -319,11 +322,6 @@ def compare_dot_lists(dots_path_1,
 
     ########################
     # chrom_1 chrom_2 are sorted and uniqued ndarrays 
-    #
-    #
-    #
-    #
-    #########################
     # extract a list of common chroms:
      if chroms_1 != chroms_2:
         print("{} and {} refers to different sets of chromosomes".format(dots_path_1,dots_path_2))
@@ -338,167 +336,94 @@ def compare_dot_lists(dots_path_1,
         # if chroms are matching ...
         common_chroms = chroms_1
 
-######################
-# fixed up to here
-#
-# to be continiued ...
+    # accumulate matching/non-matching lists genome-wide:
+    m1_gw = pd.Index([],dtype=int)
+    nm1_gw = pd.Index([],dtype=int)
+    m2_gw = pd.Index([],dtype=int)
+    nm2_gw = pd.Index([],dtype=int)
 
-#############################################################
-#############################################################
-#############################################################
-#############################################################
-t2_ref_msg = ""
-t1_ref_msg = ""
+    # prototype of the output:
+    # chrom 1in2 2in1 1notin2 2notin1 1total 2total
+    _chrom = []
+    _1in2, _2in1 = [], []
+    _1notin2, _2notin1 = [], []
+    _1total, _2total = [], []
 
-all_match = 0
-
-m1all = pd.Index([],dtype=int)
-nm1all = pd.Index([],dtype=int)
-m2all = pd.Index([],dtype=int)
-nm2all = pd.Index([],dtype=int)
-
-# perform comparison for common chromosomes:
-for chrom in common_chroms:
-    non_matching = []
-    # extract lists of dots per chromosome
-    d1c = dots_1[dots_1['chrom1']==chrom]
-    d2c = dots_2[dots_2['chrom1']==chrom]
-    # create KDTrees using "start" coordinates...
-    t1 = cKDTree(d1c[['start1','start2']].values)
-    t2 = cKDTree(d2c[['start1','start2']].values)
-    # intersect the trees/lists ...
-    m1,nm1 = intersect_dots_sets(t1,t2)
-    m2,nm2 = intersect_dots_sets(t2,t1)
-    print("{}:\t{}\tt1-s not in t2, {}\tare; {}\tt2-s are in t1, {}\tare not"\
-          .format(chrom,len(nm1),len(m1),len(m2),len(nm2)))
-    assert len(m1+nm1) == len(d1c)
-    assert len(m2+nm2) == len(d2c)
-    m1all = m1all.append(d1c.index[m1])
-    nm1all = nm1all.append(d1c.index[nm1])
-    m2all = m2all.append(d2c.index[m2])
-    nm2all = nm2all.append(d2c.index[nm2])
-print("{}:\t{}\tt1-s not in t2, {}\tare; {}\tt2-s are in t1, {}\tare not"\
-      .format("ALL",(nm1all).size,(m1all).size,len(m2all),len(nm2all)))
-    
-
-# assign diags:    
-d1f['diag'] = (d1f['start1']-d1f['start2']).abs()
-d2f['diag'] = (d2f['start1']-d2f['start2']).abs()
-#############################################################
-#############################################################
-#############################################################
-#############################################################
+    # perform comparison for common chromosomes:
+    for chrom in common_chroms:
+        # extract lists of dots per chromosome
+        d1_chr = dots_1[dots_1['chrom1']==chrom]
+        d2_chr = dots_2[dots_2['chrom1']==chrom]
+        # create KDTrees using "start" coordinates...
+        tree1 = cKDTree(d1_chr[[bin1_id_name,bin2_id_name]].values)
+        tree2 = cKDTree(d2_chr[[bin1_id_name,bin2_id_name]].values)
+        # intersect the trees/lists ...
+        # mind non-commutative nature of it ...
+        # for each peak from tree1, see if it has neighbours in tree2:
+        m1_chr, nm1_chr = intersect_dots_sets(tree1,tree2)
+        # for each peak from tree2, see if it has neighbours in tree1:
+        m2_chr, nm2_chr = intersect_dots_sets(tree2,tree1)
+        # just some sanity check 
+        assert len(m1_chr+nm1_chr) == len(d1_chr)
+        assert len(m2_chr+nm2_chr) == len(d2_chr)
+        # accumulate output lists ...
+        _chrom.append(chrom)
+        _1in2.append(len(m1_chr))
+        _2in1.append(len(m2_chr))
+        _1notin2.append(len(nm1_chr))
+        _2notin1.append(len(nm2_chr))
+        _1total.append(len(d1_chr))
+        _2total.append(len(d2_chr))
+        # append actual dots to the genome-wide lists:
+        m1_gw = m1_gw.append(d1_chr.index[m1_chr])
+        nm1_gw = nm1_gw.append(d1_chr.index[nm1_chr])
+        m2_gw = m2_gw.append(d2_chr.index[m2_chr])
+        nm2_gw = nm2_gw.append(d2_chr.index[nm2_chr])
 
 
-    # looks like lists of dots are good to go:
+    # try generating that from the output_df instead of accumulating lists
+    output_df = pd.DataFrame({'chrom':_chrom,
+                            "1in2":_1in2,
+                            "2in1":_2in1,
+                            "1notin2":_1notin2,
+                            "2notin1":_2notin1,
+                            "1total":_1total,
+                            "2total":_2total
+                            })
+
+    # verbose output to stdout ...
     if verbose:
-        # before merging:
-        print("Before comparison:")
-        print("number of dots_1: {}\n".format(len(dots_1)))
-        print("number of dots_2: {}\n".format(len(dots_2)))
+        print("We'll refer to dots from 1 as 1-s and from 2 as 2-s")
+        # 
+        for chrom,m1,m2,nm1,nm2,tot1,tot2 in output_df.itertuples(index=False):
+            # report per chromosome:
+            print("{}:\t{}\t1-s not in 2, {}\tare; {}\t2-s are in 1, {}\tare not, tot1-s {}\ttot2-s {}"\
+                .format(chrom,len(nm1),len(m1),len(m2),len(nm2),len(tot1),len(tot2)))
+        # genome-wide message print out:
+        print("{}:\t{}\t1-s not in 2, {}\tare; {}\t2-s are in 1, {}\tare not, tot1-s {}\ttot2-s {}"\
+            .format("genome-wide",*output_df[["1notin2","1in2","2in1","2notin1","1total","2total"]].sum().values))
 
-    # add label to each DataFrame:
-    dots_1["dot_label"] = "cmp1"
-    dots_2["dot_label"] = "cmp2"
-
-    # merge 2 DataFrames and sort (why sorting ?! just in case):
-    dots_merged = pd.concat([dots_1,dots_2], ignore_index=True) \
-                    .sort_values(by=["chrom1",bin1_id_name,"chrom2",bin2_id_name])
-
-    very_verbose = False
-    pixel_clust_list = []
-    # clustering is done on a per-chromosome basis ...
-    for chrom in chroms:
-        pixel_clust = clust_2D_pixels(dots_merged[(dots_merged['chrom1']==chrom) & \
-                                                  (dots_merged['chrom2']==chrom)],
-                                      threshold_cluster=radius,
-                                      bin1_id_name=bin1_id_name,
-                                      bin2_id_name=bin2_id_name,
-                                      clust_label_name='c_label_merge',
-                                      clust_size_name='c_size_merge',
-                                      verbose=very_verbose)
-        pixel_clust_list.append(pixel_clust)
-    # concatenate clustering results ...
-    # indexing information persists here ...
-    pixel_clust_df = pd.concat(pixel_clust_list, ignore_index=False)
-    # pixel_clust_list
-    # must be a DataFrame with the following columns:
-    # ['c'+bin1_id_name, 'c'+bin2_id_name, 'c_label_merge', 'c_size_merge']
-    # thus there should be no column naming conflicts downsrteam ...
-
-    # now merge pixel_clust_df and dots_merged DataFrame (index-wise):
-    # ignore suffixes=('_x','_y'), taken care of upstream.
-    dots_merged =  dots_merged.merge(pixel_clust_df,
-                                     how='left',
-                                     left_index=True,
-                                     right_index=True)
-
-    if verbose:
-        # report larger >2 clusters.
-        # These are a bit of an artifact, where a peak from
-        # 1 list have more than one good counterpart in the
-        # other list.
-        print("\nNumber of pixels in unwanted >2 clusters: {}\n" \
-            .format(len(dots_merged[dots_merged["c_size_merge"]>2])))
-
-
-    # introduce unqie genome-wide labels per merged cluster,
-    # just in case:
-    dots_merged["c_label_merge"] = dots_merged["chrom1"]+ \
-                                      "_" + dots_merged["c_label_merge"].astype(np.str)
-
-    # all we need to do is to count reproducible peaks ...
-    reproducible_peaks = dots_merged[dots_merged["c_size_merge"]>1]
-    nonreproducible_peaks = dots_merged[dots_merged["c_size_merge"]==1]
-    # number to print out ...
-    number_of_reproducible_peaks = len(reproducible_peaks["c_label_merge"].unique())
-    #
-    if verbose:
-        # describe each category:
-        print("number_of_reproducible_peaks: {}\n".format(number_of_reproducible_peaks))
+    # verbose and output are redundant at this point ...
+    if output:
+        output_df.to_csv(output,sep='\t',index=False)
+    else:
+        print(output_df.to_csv(sep='\t',index=False))
 
     ###################################################################
     # extract and output reproducible/nonoverlaping peaks ...
     ###################################################################
-    rep_dots_1 = reproducible_peaks[reproducible_peaks["dot_label"]=="cmp1"]
-    rep_dots_2 = reproducible_peaks[reproducible_peaks["dot_label"]=="cmp2"]
-    # we are very interested in the non-reproducible peaks as well,
-    # at least for debugging purposes, thus we'd want to output them ...
-    nonrep_dots_1 = nonreproducible_peaks[nonreproducible_peaks["dot_label"]=="cmp1"]
-    nonrep_dots_2 = nonreproducible_peaks[nonreproducible_peaks["dot_label"]=="cmp2"]
-
-    # output:
+    # output dots split into 1in2, 2in1, 1notin2, 2notin1 categories ...
     if out_nonoverlap1:
-        nonrep_dots_1.merge(fulldots_1,
-            how="left",
-            # consider modifying 'must_columns_cmp' or this on
-            # argument to something smaller later on ...
-            on=must_columns_cmp,
-            sort=True ).to_csv(out_nonoverlap1,sep='\t',index=False)
+        nm1_gw.to_csv(out_nonoverlap1,sep='\t',index=False)
     if out_nonoverlap2:
-        nonrep_dots_2.merge(fulldots_2,
-            how="left",
-            # consider modifying 'must_columns_cmp' or this on
-            # argument to something smaller later on ...
-            on=must_columns_cmp,
-            sort=True ).to_csv(out_nonoverlap2,sep='\t',index=False)
+        nm2_gw.to_csv(out_nonoverlap2,sep='\t',index=False)
     if out_overlap1:
-        rep_dots_1.merge(fulldots_1,
-            how="left",
-            # consider modifying 'must_columns_cmp' or this on
-            # argument to something smaller later on ...
-            on=must_columns_cmp,
-            sort=True ).to_csv(out_overlap1,sep='\t',index=False)
+        m1_gw.to_csv(out_overlap1,sep='\t',index=False)
     if out_overlap2:
-        rep_dots_2.merge(fulldots_2,
-            how="left",
-            # consider modifying 'must_columns_cmp' or this on
-            # argument to something smaller later on ...
-            on=must_columns_cmp,
-            sort=True ).to_csv(out_overlap2,sep='\t',index=False)
+        m2_gw.to_csv(out_overlap2,sep='\t',index=False)
 
     # return just in case ...
-    return number_of_reproducible_peaks
+    return 0
 
 
 
