@@ -302,7 +302,7 @@ def intersect_dots_sets(tin,
     show_default=True)
 
 
-def compare_dot_lists(dots_path_1,
+def compare_dot_lists_KDTree(dots_path_1,
                       dots_path_2,
                       radius,
                       verbose,
@@ -323,7 +323,7 @@ def compare_dot_lists(dots_path_1,
     ########################
     # chrom_1 chrom_2 are sorted and uniqued ndarrays 
     # extract a list of common chroms:
-     if chroms_1 != chroms_2:
+    if chroms_1 != chroms_2:
         print("{} and {} refers to different sets of chromosomes".format(dots_path_1,dots_path_2))
         print("chroms_1:\n{}\nchroms_2:\n{}\n".format(chroms_1,chroms_2))
         print("try proceeding with the set of common chromosomes ...")
