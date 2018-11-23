@@ -14,5 +14,4 @@ def cli():
     """
 
 from . import (compare_dot_lists,
-	compare_dot_lists_KDTree,
     merge_dot_lists)
