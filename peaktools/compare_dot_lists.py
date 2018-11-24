@@ -371,13 +371,17 @@ def compare_dot_lists(dots_path_1,
     m2_gw = pd.concat(m2_gw,ignore_index=True)
     nm2_gw = pd.concat(nm2_gw,ignore_index=True)
 
+    # use .get(key,0) instead of .loc[common_chroms] to handle empty df-s:
+    get_size_per_chrom = lambda df: [df.groupby("chrom1").size().get(chrom,0) \
+                                                        for chrom in common_chroms]
+
     # generate output describing # of matches/non-matches per chrom
     output_df = pd.DataFrame({
                     "chrom":common_chroms,
-                    "1in2":m1_gw.groupby('chrom1').size().loc[common_chroms].values,
-                    "2in1":m2_gw.groupby('chrom1').size().loc[common_chroms].values,
-                    "1notin2":nm1_gw.groupby('chrom1').size().loc[common_chroms].values,
-                    "2notin1":nm2_gw.groupby('chrom1').size().loc[common_chroms].values,
+                    "1in2":get_size_per_chrom(m1_gw),
+                    "2in1":get_size_per_chrom(m2_gw),
+                    "1notin2":get_size_per_chrom(nm1_gw),
+                    "2notin1":get_size_per_chrom(nm2_gw),
                     "1total":dg1.size().loc[common_chroms].values,
                     "2total":dg2.size().loc[common_chroms].values })
 
