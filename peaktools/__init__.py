@@ -1,5 +1,6 @@
 import click
-
+from . import io
+from . import lib
 
 
 CONTEXT_SETTINGS = {
@@ -14,4 +15,5 @@ def cli():
     """
 
 from . import (compare_dot_lists,
-    merge_dot_lists)
+    merge_dot_lists,
+    merge_dot_lists_KDTree)

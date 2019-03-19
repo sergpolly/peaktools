@@ -1,0 +1,1 @@
+from .dots_io import read_validate_dots_list
