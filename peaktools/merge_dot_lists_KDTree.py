@@ -168,7 +168,7 @@ def merge_dot_lists_KDTree(dots_path_5kb,
     
     # dedup is required as overlap is unavoidable ...????
     print("DEBUG: check for duplicates:")
-    print( dots_merged_filtered.duplicates(subset=["chrom1",bin1_id_name,"chrom2",bin2_id_name]) )
+    print( dots_merged_filtered.duplicated(subset=["chrom1",bin1_id_name,"chrom2",bin2_id_name]) )
 
     if verbose:
         # final number:
