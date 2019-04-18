@@ -96,26 +96,20 @@ def merge_dot_lists_KDTree(dots_path_5kb,
     fulldots_10kb, dots_10kb, chroms_10kb = read_validate_dots_list(dots_path_10kb,return_chroms=True)
 
     ########################
-    # chrom_5kb chrom_1kb are sorted and uniqued ndarrays 
-    not_matching_chroms = False
-    if (chroms_5kb.shape != chroms_10kb.shape):
-        not_matching_chroms = True
-    elif (chroms_5kb.sort() != chroms_10kb.sort()).any():
-        not_matching_chroms = True
-    else:
-        pass
+    # "chrom_5kb" "chrom_1kb" are uniqued but not-sorted ndarrays
+    matching_chroms = np.array_equal(chroms_5kb.sort(),chroms_10kb.sort())
     # extract a list of common chroms:    
-    if not_matching_chroms:
+    if matching_chroms:
+        common_chroms = chroms_5kb
+    else:
         print("{} and {} refers to different sets of chromosomes".format(dots_path_1,dots_path_2))
         print("chroms_5kb:\n{}\nchroms_2:\n{}\n".format(chroms_5kb,chroms_10kb))
         print("try proceeding with the set of common chromosomes ...")
         common_chroms = np.intersect1d(chroms_5kb,
                                     chroms_10kb,
                                     assume_unique=True)
-    else:
-        common_chroms = chroms_5kb
     # check if common chroms list is not empty:
-    if len(common_chroms) == 0:
+    if common_chroms.size == 0:
         raise ValueError("chroms intersection is empty ...")
     # chromosomes are cleared!
 
